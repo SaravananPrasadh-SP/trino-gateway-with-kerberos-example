@@ -1,0 +1,147 @@
+
+starburstPlatformLicense: mylicense
+
+environment: kuberos
+sharedSecret: AN0Qhhw9PsZmEgEXAMPLEkIj3AJZ5/Mnyy5iRANDOMceM+SSV+APSTiSTRING
+internalTls: false
+internal:
+  ports:
+    http:
+      port: 8080
+    https:
+      port: 8443
+
+# ------------------------------------------------------------------------------
+# Coordinator
+# ------------------------------------------------------------------------------
+
+coordinator:
+  etcFiles:
+    log.properties: |
+       io.trino.server.security=DEBUG
+    jvm.config: |
+      -server
+      --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+      --add-opens=java.base/java.nio=ALL-UNNAMED
+      --add-opens=java.base/java.lang=ALL-UNNAMED
+      --add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED
+      -XX:G1HeapRegionSize=32M
+      -XX:+ExplicitGCInvokesConcurrent
+      -XX:+HeapDumpOnOutOfMemoryError
+      -XX:+ExitOnOutOfMemoryError
+      -XX:ReservedCodeCacheSize=512M
+      -XX:PerMethodRecompilationCutoff=10000
+      -XX:PerBytecodeRecompilationCutoff=10000
+      -XX:+UnlockDiagnosticVMOptions
+      -XX:+UseAESCTRIntrinsics
+      -XX:InitialRAMPercentage=80
+      -XX:MaxRAMPercentage=80
+      -Djdk.nio.maxCachedBufferSize=2000000
+      -Djdk.attach.allowAttachSelf=true
+      -Dsun.security.krb5.debug=true
+  
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: 1
+    limits:
+      memory: "2Gi"
+  nodeMemoryHeadroom: "100Mi"
+
+  additionalProperties: |
+    query.max-memory = 1PB
+    http-server.process-forwarded=true
+    insights.persistence-enabled=false
+    insights.metrics-persistence-enabled=false
+    http-server.authentication.type=password, KERBEROS
+    #TLS
+    http-server.https.keystore.path: /etc/certificates/cert.pem
+    http-server.https.enabled: true
+    http-server.https.port: 8443
+    #KRB
+    http-server.authentication.krb5.service-name=gateway
+    http-server.authentication.krb5.principal-hostname=trino-gateway.test.svc.cluster.local
+    http-server.authentication.krb5.keytab=/etc/keytabs/gateway.keytab
+    http.authentication.krb5.config=/etc/krb5.conf
+    #
+    http-server.authentication.allow-insecure-over-http=true
+    web-ui.authentication.type=form
+    starburst.data-product.enabled=false
+    node-scheduler.include-coordinator=true
+
+additionalVolumes:
+- path: /etc/keytabs
+  volume:
+    secret:
+      secretName: "keytabs"
+- path: /etc/krb5.conf
+  subPath: krb5.conf
+  volume:
+    configMap:
+      name: krb5-conf
+- path: /etc/certificates
+  volume:
+    secret:
+      secretName: certificates
+
+userDatabase:
+  enabled: true
+  users:
+    - username: admin
+      password: admin
+    - username: will
+      password: will
+
+
+usageMetrics:
+  enabled: false
+
+# ------------------------------------------------------------------------------
+# Workers
+# ------------------------------------------------------------------------------
+
+worker:
+  replicas: 0
+  deploymentTerminationGracePeriodSeconds: 20 
+  starburstWorkerShutdownGracePeriodSeconds: 10 
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: 1
+    limits:
+      memory: "1Gi"
+  # size of container memory headroom, needs to be less that resource allocation limit for memory
+  nodeMemoryHeadroom: "1Mi"
+  # Percentage of container memory reduced with headroom assigned to Java heap, must be less than 100
+  heapSizePercentage: 80
+  # Headroom of Java heap memory not tracked by Presto during query execution, must be less than 100
+  heapHeadroomPercentage: 30
+  additionalProperties: |
+    query.max-memory = 1PB
+
+  envFrom:
+    - secretRef:
+        name: variables-secret
+
+  nodeSelector:
+    role: noschedule
+    # prevent scheduling
+
+
+# ------------------------------------------------------------------------------
+# Catalogs
+# ------------------------------------------------------------------------------
+
+catalogs:
+  tpch: |-
+    connector.name=tpch
+    tpch.splits-per-node=4
+  tpcds: |-
+    connector.name=tpcds
+
+# ------------------------------------------------------------------------------
+# Cluster Ingress
+# ------------------------------------------------------------------------------
+
+expose:
+  type: "clusterIp"

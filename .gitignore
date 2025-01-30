@@ -1,0 +1,10 @@
+starburstdata.license
+.idea
+kuberos-master
+kuberos
+kuberos.zip
+registry-credentials.yaml
+*keytab
+*.crt
+*.pem
+*.key

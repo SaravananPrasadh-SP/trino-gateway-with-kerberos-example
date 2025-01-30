@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kclient
+spec:
+  containers:
+    - image: redhat/ubi9
+      command:
+        - "bash"
+        - "-c"
+        - |
+          yum install krb5-workstation krb5-libs -y && sleep 720000
+      imagePullPolicy: IfNotPresent
+      name: kclient
+
+      volumeMounts:
+        - mountPath: "/etc/keytabs"
+          name: keytabs
+          readOnly: true
+        - mountPath: "/etc/krb5.conf"
+          subPath: krb5.conf
+          name: krb5-conf
+          readOnly: true
+  volumes:
+    - name: keytabs
+      secret:
+        secretName: keytabs
+    - name: krb5-conf
+      configMap:
+        name: krb5-conf
+  restartPolicy: Always
