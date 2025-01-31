@@ -1,3 +1,10 @@
 admin_princ:
   name: "admin"
   password: "admin"
+
+kdc:
+  persistence:
+    enabled: true
+    name: kerberos-db
+    storageClass: gp2
+    size: 1Gi

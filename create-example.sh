@@ -2,17 +2,24 @@
 set -e
 #update the kdc hostname in krb5-conf-cm.yaml and the http-server.authentication.krb5.principal-hostname parameter of SEP if this is changed
 NAMESPACE=test
-kubectl create namespace ${NAMESPACE}
-
+# Check if the namespace exists
+if ! kubectl get namespace ${NAMESPACE} &> /dev/null; then
+  echo "Creating namespace ${NAMESPACE}"
+  kubectl create namespace ${NAMESPACE}
+fi
+# Check if you want to enable debug for helm
+if [[ ${DEBUG} ]] ; then
+  DEBUGTXT="--debug"
+fi
 # Get kuberos
 rm -rf kuberos
 curl -L --output kuberos.zip https://github.com/jeffgrunewald/kuberos/archive/refs/heads/master.zip
 unzip -o kuberos.zip
 mv kuberos-master kuberos
 
-
 #prepare env. Realm can be changed from EXAMPLE.COM and admin user set by modifying local-values.yaml
-helm -n ${NAMESPACE} upgrade --install kuberos kuberos/kuberos --values local-values.yaml
+# Need the Storage Class to be changed to gp2 for EKS
+helm -n ${NAMESPACE} upgrade --install kuberos kuberos/kuberos --values local-values.yaml ${DEBUGTXT}
 
 shopt -s expand_aliases
 alias kadmin_exec="kubectl -n ${NAMESPACE} exec kuberos-kuberos-kdc-0 -c kadmin -- /usr/sbin/kadmin.local -r EXAMPLE.COM -p admin/admin"
