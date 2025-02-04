@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 #update the kdc hostname in krb5-conf-cm.yaml and the http-server.authentication.krb5.principal-hostname parameter of SEP if this is changed
-NAMESPACE=test
+NAMESPACE=starburst
 # Check if the namespace exists
 if ! kubectl get namespace ${NAMESPACE} &> /dev/null; then
   echo "Creating namespace ${NAMESPACE}"

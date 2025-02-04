@@ -1,7 +1,13 @@
+serviceAccount:
+  name: sp-eks-s3-glue
+
 admin_princ:
   name: "admin"
   password: "admin"
 
+# For EKS, make sure the EBS CSI addon is installed.
+# Added the EC2 and EBS permission to the role.
+# added the service account, this in my case needed the edit of the service account and help etc.
 kdc:
   persistence:
     enabled: true
